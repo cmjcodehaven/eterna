@@ -178,12 +178,12 @@ Adicione as variáveis em **Site settings → Environment variables**.
 
 Antes de entregar o app ao cliente, verifique:
 
-- [ ] Bucket `event-photos` está com acesso **privado** (não público)
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` não aparece em nenhum arquivo do frontend (grep para confirmar)
-- [ ] Edge Functions deployadas e secrets configurados
-- [ ] Migration SQL aplicada e tabelas criadas (`events`, `guests`, `photos`, `user_roles`)
-- [ ] Usuários admin e casal criados via `bootstrap-staff`
-- [ ] Evento criado com slug correto
+- [x] Bucket `event-photos` está com acesso **privado** (não público)
+- [x] `SUPABASE_SERVICE_ROLE_KEY` não aparece em nenhum arquivo do frontend (grep confirmado)
+- [x] Edge Functions deployadas e secrets configurados (`guest-login`, `submit-photos`, `bootstrap-staff`)
+- [x] Migration SQL aplicada e tabelas criadas (`events`, `guests`, `photos`, `user_roles`)
+- [x] Usuários admin e casal criados via `bootstrap-staff`
+- [x] Evento criado com slug `casamento-eterna`
 - [ ] QR Code testado — aponta para a URL certa com `?evento=slug`
 - [ ] Login de convidado testado (telefone + slug do evento)
 - [ ] Câmera funcionando em iPhone Safari e Android Chrome
