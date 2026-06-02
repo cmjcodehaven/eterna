@@ -12,6 +12,6 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase: SupabaseClient<Database> = createClient<Database>(
-  supabaseUrl ?? "https://placeholder.supabase.co",
-  supabaseKey ?? "placeholder-anon-key"
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseKey || "placeholder-anon-key"
 );
