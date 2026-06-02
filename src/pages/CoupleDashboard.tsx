@@ -31,6 +31,8 @@ import type { PhotoItem } from "@/types/domain";
 
 type Tab = "gallery" | "curatorship" | "guests";
 
+const PHOTOS_PER_PAGE = 12;
+
 interface GuestGroup {
   guestId:          string;
   guestName:        string;
@@ -39,6 +41,7 @@ interface GuestGroup {
   signedUrls:       Record<string, string>;
   expanded:         boolean;
   loadingUrls:      boolean;
+  visibleCount:     number;
 }
 
 interface GuestRow {
@@ -94,6 +97,7 @@ export default function CoupleDashboard() {
               signedUrls:       {},
               expanded:         false,
               loadingUrls:      false,
+              visibleCount:     PHOTOS_PER_PAGE,
             });
           }
           groupMap.get(photo.guestId)!.photos.push(photo);
@@ -161,6 +165,17 @@ export default function CoupleDashboard() {
         )
       );
     }
+  }
+
+  // ── Gallery: load more photos ───────────────────────────────────────────────
+  function loadMorePhotos(guestId: string) {
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.guestId === guestId
+          ? { ...g, visibleCount: g.visibleCount + PHOTOS_PER_PAGE }
+          : g
+      )
+    );
   }
 
   // ── Gallery: toggle star ─────────────────────────────────────────────────────
@@ -343,51 +358,61 @@ export default function CoupleDashboard() {
 
               {/* Photo grid */}
               {group.expanded && !group.loadingUrls && (
-                <div className="grid grid-cols-3 gap-1 px-1 pb-3">
-                  {group.photos.map((photo) => {
-                    const url = group.signedUrls[photo.storagePath];
-                    return (
-                      <div key={photo.id} className="relative aspect-square rounded overflow-hidden bg-card">
-                        {url ? (
-                          <img
-                            src={url}
-                            alt={`Foto de ${group.guestName}`}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Loader2 size={14} className="animate-spin text-gold" />
-                          </div>
-                        )}
-                        {/* Download individual */}
-                        {url && (
-                          <a
-                            href={url}
-                            download={photo.storagePath.split("/").pop() ?? "foto.jpg"}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label="Baixar foto"
-                            className="absolute top-1.5 left-1.5 bg-black/60 text-white/80 rounded-full p-1 hover:text-white transition-colors"
-                            onClick={(e) => e.stopPropagation()}
+                <div className="pb-3">
+                  <div className="grid grid-cols-3 gap-1 px-1">
+                    {group.photos.slice(0, group.visibleCount).map((photo) => {
+                      const url = group.signedUrls[photo.storagePath];
+                      return (
+                        <div key={photo.id} className="relative aspect-square rounded overflow-hidden bg-card">
+                          {url ? (
+                            <img
+                              src={url}
+                              alt={`Foto de ${group.guestName}`}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Loader2 size={14} className="animate-spin text-gold" />
+                            </div>
+                          )}
+                          {/* Download individual */}
+                          {url && (
+                            <a
+                              href={url}
+                              download={photo.storagePath.split("/").pop() ?? "foto.jpg"}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label="Baixar foto"
+                              className="absolute top-1.5 left-1.5 bg-black/60 text-white/80 rounded-full p-1 hover:text-white transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Download size={11} />
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleToggleStar(photo.id, photo.selected)}
+                            aria-label={photo.selected ? "Remover seleção" : "Selecionar"}
+                            className={`absolute bottom-1.5 right-1.5 rounded-full p-1 transition-colors ${
+                              photo.selected
+                                ? "bg-gold text-background"
+                                : "bg-black/60 text-white/60"
+                            }`}
                           >
-                            <Download size={11} />
-                          </a>
-                        )}
-                        <button
-                          onClick={() => handleToggleStar(photo.id, photo.selected)}
-                          aria-label={photo.selected ? "Remover seleção" : "Selecionar"}
-                          className={`absolute bottom-1.5 right-1.5 rounded-full p-1 transition-colors ${
-                            photo.selected
-                              ? "bg-gold text-background"
-                              : "bg-black/60 text-white/60"
-                          }`}
-                        >
-                          <Star size={12} fill={photo.selected ? "currentColor" : "none"} />
-                        </button>
-                      </div>
-                    );
-                  })}
+                            <Star size={12} fill={photo.selected ? "currentColor" : "none"} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {group.visibleCount < group.photos.length && (
+                    <button
+                      onClick={() => loadMorePhotos(group.guestId)}
+                      className="w-full mt-2 py-2 text-[10px] tracking-wide uppercase text-gold border-t border-gold-muted"
+                    >
+                      Carregar mais ({group.photos.length - group.visibleCount} restantes)
+                    </button>
+                  )}
                 </div>
               )}
             </div>

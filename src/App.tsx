@@ -1,18 +1,24 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
+import { Suspense, lazy } from "react";
 import { GuestProvider, useGuest } from "@/contexts/GuestContext";
 import { StaffProvider }           from "@/contexts/StaffContext";
 import ProtectedStaffRoute         from "@/components/ProtectedStaffRoute";
-import Login          from "@/pages/Login";
-import Home           from "@/pages/Home";
-import Camera         from "@/pages/Camera";
-import Review         from "@/pages/Review";
-import StaffLogin     from "@/pages/StaffLogin";
-import CoupleDashboard    from "@/pages/CoupleDashboard";
-import Curatorship        from "@/pages/Curatorship";
-import AdminDashboard     from "@/pages/AdminDashboard";
-import AdminEventDetail   from "@/pages/AdminEventDetail";
-import NotFound           from "@/pages/NotFound";
+import OfflineBanner               from "@/components/OfflineBanner";
+
+// Rotas do convidado — carregadas imediatamente (caminho crítico)
+import Login   from "@/pages/Login";
+import Home    from "@/pages/Home";
+import Camera  from "@/pages/Camera";
+import Review  from "@/pages/Review";
+
+// Rotas de staff/admin — lazy (convidado nunca precisa delas)
+const StaffLogin       = lazy(() => import("@/pages/StaffLogin"));
+const CoupleDashboard  = lazy(() => import("@/pages/CoupleDashboard"));
+const Curatorship      = lazy(() => import("@/pages/Curatorship"));
+const AdminDashboard   = lazy(() => import("@/pages/AdminDashboard"));
+const AdminEventDetail = lazy(() => import("@/pages/AdminEventDetail"));
+const NotFound         = lazy(() => import("@/pages/NotFound"));
 
 // ─── Guest route guard ────────────────────────────────────────────────────────
 
@@ -26,6 +32,7 @@ function ProtectedGuestRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
+    <Suspense fallback={null}>
     <Routes>
       {/* ── Guest area ─────────────────────────────────────── */}
       <Route path="/" element={<Login />} />
@@ -82,6 +89,7 @@ function AppRoutes() {
 
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
   );
 }
 
@@ -92,6 +100,7 @@ export default function App() {
     <BrowserRouter>
       <StaffProvider>
         <GuestProvider>
+          <OfflineBanner />
           <AppRoutes />
           <Toaster
             position="top-center"
