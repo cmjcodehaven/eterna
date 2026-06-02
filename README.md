@@ -77,13 +77,13 @@ supabase functions deploy submit-photos
 supabase functions deploy bootstrap-staff
 ```
 
-Em seguida, configure os **secrets** das functions no painel (Settings → Edge Functions → Secrets), ou via CLI:
+Em seguida, configure os **secrets** no painel (Settings → Edge Functions → Secrets), ou via CLI:
 
 ```bash
-supabase secrets set SUPABASE_URL=https://SEU_PROJECT_ID.supabase.co
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=eyJ...
 supabase secrets set BOOTSTRAP_SECRET=uma-senha-longa-e-aleatoria
 ```
+
+> **Atenção:** `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` são **auto-injetados** pelo runtime das Edge Functions — não tente setá-los manualmente (a CLI rejeita vars com prefixo `SUPABASE_`).
 
 > O `BOOTSTRAP_SECRET` protege a criação dos primeiros usuários admin/casal. Use um UUID aleatório ou uma senha forte.
 
@@ -95,6 +95,7 @@ Após o deploy das Edge Functions, execute **uma única vez**:
 
 ```bash
 curl -X POST https://SEU_PROJECT_ID.supabase.co/functions/v1/bootstrap-staff \
+  -H "Authorization: Bearer SUA_ANON_KEY" \
   -H "x-bootstrap-secret: SUA_BOOTSTRAP_SECRET" \
   -H "Content-Type: application/json" \
   -d '{
@@ -104,6 +105,8 @@ curl -X POST https://SEU_PROJECT_ID.supabase.co/functions/v1/bootstrap-staff \
     "couplePassword": "senha-forte-casal"
   }'
 ```
+
+> O header `Authorization: Bearer <anon-key>` é obrigatório mesmo com `--no-verify-jwt`, pois o gateway do Supabase exige o header presente.
 
 Após criar os usuários, a função pode ser desabilitada no painel Supabase para segurança adicional.
 
@@ -206,7 +209,9 @@ Antes de entregar o app ao cliente, verifique:
 ```
 src/
 ├── contexts/        GuestContext, StaffContext
-├── components/      BrandHeader, ProtectedStaffRoute, PolaroidFrame
+├── components/      BrandHeader, ProtectedStaffRoute, PolaroidFrame,
+│                    OfflineBanner
+├── hooks/           useOnlineStatus
 ├── pages/           Login, Home, Camera, Review, StaffLogin,
 │                    CoupleDashboard, Curatorship,
 │                    AdminDashboard, AdminEventDetail
