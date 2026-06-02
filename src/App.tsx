@@ -14,6 +14,7 @@ import Review  from "@/pages/Review";
 
 // Rotas de staff/admin — lazy (convidado nunca precisa delas)
 const StaffLogin       = lazy(() => import("@/pages/StaffLogin"));
+const ResetPassword    = lazy(() => import("@/pages/ResetPassword"));
 const CoupleDashboard  = lazy(() => import("@/pages/CoupleDashboard"));
 const Curatorship      = lazy(() => import("@/pages/Curatorship"));
 const AdminDashboard   = lazy(() => import("@/pages/AdminDashboard"));
@@ -48,6 +49,9 @@ function AppRoutes() {
         path="/app/review"
         element={<ProtectedGuestRoute><Review /></ProtectedGuestRoute>}
       />
+
+      {/* ── Auth ───────────────────────────────────────────── */}
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* ── Staff area ─────────────────────────────────────── */}
       <Route path="/staff" element={<StaffLogin />} />
