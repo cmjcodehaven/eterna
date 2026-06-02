@@ -32,7 +32,7 @@ function ProtectedGuestRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
     <Routes>
       {/* ── Guest area ─────────────────────────────────────── */}
       <Route path="/" element={<Login />} />
