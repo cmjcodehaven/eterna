@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: #080808;
+    color: #f7f0df;
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #080808;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(201, 162, 77, 0.3);
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  /* ── Layout ────────────────────────────────────────────────── */
+
+  .luxe-frame {
+    @apply min-h-screen bg-background flex flex-col;
+  }
+
+  .luxe-frame-inner {
+    @apply w-full max-w-sm mx-auto px-6 py-10;
+  }
+
+  /* ── Cards ─────────────────────────────────────────────────── */
+
+  .luxe-card {
+    @apply bg-card border border-gold-subtle rounded-lg;
+  }
+
+  /* ── Divisores ─────────────────────────────────────────────── */
+
+  .gold-divider {
+    @apply w-full h-px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      theme("colors.gold.DEFAULT"),
+      transparent
+    );
+    opacity: 0.45;
+  }
+
+  /* ── Marca ──────────────────────────────────────────────────── */
+
+  .brand-subtitle {
+    @apply block text-[10px] tracking-luxury uppercase text-gold mb-1;
+  }
+
+  .brand-title {
+    @apply font-serif text-2xl tracking-wide text-parchment;
+  }
+
+  /* ── Botões ─────────────────────────────────────────────────── */
+
+  .btn-gold {
+    @apply flex w-full items-center justify-center gap-2
+           bg-gold text-background font-semibold
+           tracking-wide uppercase text-sm rounded
+           px-6 py-3.5 transition-colors
+           hover:bg-gold-bright
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-gold-outline {
+    @apply flex w-full items-center justify-center gap-2
+           border border-gold text-gold font-semibold
+           tracking-wide uppercase text-sm rounded
+           px-6 py-3.5 transition-colors
+           hover:bg-gold-muted
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply flex items-center gap-1.5
+           text-parchment-muted text-[10px] tracking-wide uppercase
+           transition-colors hover:text-parchment;
+  }
+
+  /* ── Formulários ────────────────────────────────────────────── */
+
+  .luxe-label {
+    @apply block text-[10px] tracking-luxury uppercase text-parchment-muted mb-2;
+  }
+
+  .luxe-input {
+    @apply w-full bg-[#0d0d0d] border border-gold-subtle rounded
+           px-4 py-3 text-parchment text-base
+           placeholder:text-parchment-muted/40
+           focus:outline-none focus:border-gold/60
+           transition-colors caret-gold;
+  }
+
+  /* ── Utilitários de foto ────────────────────────────────────── */
+
+  .photo-counter {
+    @apply text-xs tracking-wide text-parchment-muted uppercase;
+  }
+
+  .polaroid {
+    @apply bg-white p-2 pb-8 shadow-lg;
+    filter: brightness(0.97) contrast(1.02);
+  }
+}
+
+@keyframes photo-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-photo-enter {
+  animation: photo-enter 0.22s ease-out both;
+}
