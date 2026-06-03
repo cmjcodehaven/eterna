@@ -34,7 +34,7 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
         setRole(await fetchRole(session.user.id));
       }
       setIsLoading(false);
-    });
+    }).catch(() => setIsLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
