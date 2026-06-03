@@ -9,6 +9,8 @@ import {
   Loader2,
   RefreshCw,
   X,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import BrandHeader from "@/components/BrandHeader";
 import { useGuest } from "@/contexts/GuestContext";
@@ -70,10 +72,11 @@ export default function Review() {
   const navigate = useNavigate();
 
   const [photos, setPhotos]               = useState<PendingPhoto[]>([]);
+  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading]         = useState(true);
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [retryAttempt, setRetryAttempt]   = useState(0); // 0 = primeira tentativa
+  const [retryAttempt, setRetryAttempt]   = useState(0);
   const [deleting, setDeleting]           = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc]     = useState<string | null>(null);
@@ -82,12 +85,28 @@ export default function Review() {
   useEffect(() => {
     if (!guest) return;
     listPendingPhotos(guest.eventId, guest.id)
-      .then(setPhotos)
+      .then((list) => {
+        setPhotos(list);
+        setSelectedIds(new Set(list.map((p) => p.localId)));
+      })
       .catch(() => toast.error("Erro ao carregar fotos salvas."))
       .finally(() => setIsLoading(false));
   }, [guest]);
 
   if (!guest) return null;
+
+  // ── Seleção de fotos ──────────────────────────────────────────────────────
+  function toggleSelect(localId: string) {
+    if (isSubmitting) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(localId)) next.delete(localId); else next.add(localId);
+      return next;
+    });
+  }
+
+  function selectAll()   { setSelectedIds(new Set(photos.map((p) => p.localId))); }
+  function deselectAll() { setSelectedIds(new Set()); }
 
   // ── Exclusão individual (com confirmação) ─────────────────────────────────
   function handleDeleteRequest(localId: string) {
@@ -112,20 +131,21 @@ export default function Review() {
 
   // ── Envio com retry automático em falhas de rede ───────────────────────────
   async function handleSubmit() {
-    if (isSubmitting || photos.length === 0 || !guest) return;
+    const toSubmit = photos.filter((p) => selectedIds.has(p.localId));
+    if (isSubmitting || toSubmit.length === 0 || !guest) return;
     setIsSubmitting(true);
     setUploadProgress(0);
     setRetryAttempt(0);
 
     try {
-      // Fase 1 — converte todos os blobs uma vez só (0 → 35%)
+      // Fase 1 — converte só as selecionadas (0 → 35%)
       const formBlobs: Array<{ blob: Blob; name: string }> = [];
-      for (let i = 0; i < photos.length; i++) {
+      for (let i = 0; i < toSubmit.length; i++) {
         formBlobs.push({
-          blob: dataUrlToBlob(photos[i].dataUrl),
+          blob: dataUrlToBlob(toSubmit[i].dataUrl),
           name: `photo-${i}.jpg`,
         });
-        setUploadProgress(Math.round(((i + 1) / photos.length) * 35));
+        setUploadProgress(Math.round(((i + 1) / toSubmit.length) * 35));
       }
 
       // Fase 2 — loop de tentativas
@@ -148,6 +168,7 @@ export default function Review() {
           formData.append("guestId", guest!.id);
           formData.append("phone",   guest!.phoneDigits);
           formBlobs.forEach(({ blob, name }) => formData.append("files", blob, name));
+          formData.append("localIds", JSON.stringify(toSubmit.map((p) => p.localId)));
 
           const { data, error } =
             await supabase.functions.invoke<SubmitPhotosResponse>("submit-photos", {
@@ -214,7 +235,7 @@ export default function Review() {
       return (
         <>
           <Send size={15} />
-          Confirmar envio ({photos.length})
+          Enviar selecionadas ({selectedIds.size})
         </>
       );
     }
@@ -280,37 +301,52 @@ export default function Review() {
       {!isLoading && photos.length > 0 && (
         <>
           <div className="px-4 pb-2">
-            <p className="text-[10px] tracking-wide uppercase text-parchment-muted mb-3">
-              {photos.length} foto{photos.length !== 1 ? "s" : ""} aguardando envio
-            </p>
+                <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] tracking-wide uppercase text-parchment-muted">
+                {selectedIds.size}/{photos.length} selecionada{selectedIds.size !== 1 ? "s" : ""}
+              </p>
+              <div className="flex gap-3">
+                <button onClick={selectAll} className="text-[10px] text-gold underline">Todas</button>
+                <button onClick={deselectAll} className="text-[10px] text-parchment-muted underline">Nenhuma</button>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              {photos.map((photo) => (
-                <div
-                  key={photo.localId}
-                  className="relative rounded overflow-hidden shadow-md"
-                >
-                  <img
-                    src={photo.dataUrl}
-                    alt="Foto pendente"
-                    className="w-full block cursor-zoom-in"
-                    loading="lazy"
-                    onClick={() => setLightboxSrc(photo.dataUrl)}
-                  />
-                  <button
-                    onClick={() => handleDeleteRequest(photo.localId)}
-                    disabled={!!deleting || isSubmitting}
-                    aria-label="Apagar foto"
-                    className="absolute top-2 right-2 bg-black/70 text-white
-                               rounded-full p-1.5 active:scale-90 transition-transform"
+              {photos.map((photo) => {
+                const selected = selectedIds.has(photo.localId);
+                return (
+                  <div
+                    key={photo.localId}
+                    className="relative rounded overflow-hidden shadow-md cursor-pointer"
+                    onClick={() => toggleSelect(photo.localId)}
                   >
-                    {deleting === photo.localId ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <Trash2 size={13} />
-                    )}
-                  </button>
-                </div>
-              ))}
+                    <img
+                      src={photo.dataUrl}
+                      alt="Foto pendente"
+                      className={`w-full block transition-opacity ${selected ? "opacity-100" : "opacity-40"}`}
+                      loading="lazy"
+                    />
+                    {/* Overlay de seleção */}
+                    <div className="absolute top-2 left-2">
+                      {selected
+                        ? <CheckCircle2 size={22} className="text-gold drop-shadow" />
+                        : <Circle size={22} className="text-white/60 drop-shadow" />
+                      }
+                    </div>
+                    {/* Botão deletar */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteRequest(photo.localId); }}
+                      disabled={!!deleting || isSubmitting}
+                      aria-label="Apagar foto"
+                      className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1.5 active:scale-90 transition-transform"
+                    >
+                      {deleting === photo.localId
+                        ? <Loader2 size={13} className="animate-spin" />
+                        : <Trash2 size={13} />
+                      }
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -333,7 +369,7 @@ export default function Review() {
             <button
               className="btn-gold"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || selectedIds.size === 0}
             >
               {submitLabel()}
             </button>
