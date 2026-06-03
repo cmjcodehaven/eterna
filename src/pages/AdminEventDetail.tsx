@@ -219,7 +219,7 @@ function GuestRowItem({ guest, photoCount, onLimitUpdated }: GuestRowItemProps) 
         <div className="flex items-center gap-2 flex-none">
           {/* Contagem de fotos */}
           <span className="text-[10px] text-parchment-muted">
-            {photoCount}/{guest.photo_limit} fotos
+            {photoCount}/{guest.photo_limit} foto{guest.photo_limit !== 1 ? "s" : ""}
           </span>
 
           {/* Edição inline de limite */}

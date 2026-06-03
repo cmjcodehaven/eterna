@@ -36,6 +36,7 @@ export default function Camera() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const isCapturingRef = useRef(false);
 
   const [mode, setMode]               = useState<CameraMode>("viewfinder");
   const [facingMode, setFacingMode]   = useState<FacingMode>("environment");
@@ -97,7 +98,7 @@ export default function Camera() {
 
   // ── Captura ────────────────────────────────────────────────────────────────
   function handleCapture() {
-    if (mode !== "viewfinder" || actualRemaining <= 0 || isSaving) return;
+    if (isCapturingRef.current || mode !== "viewfinder" || actualRemaining <= 0 || isSaving) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -107,7 +108,7 @@ export default function Camera() {
       return;
     }
 
-    // Flash visual de obturador
+    isCapturingRef.current = true;
     setIsFlashing(true);
     setTimeout(() => setIsFlashing(false), 150);
 
@@ -133,11 +134,13 @@ export default function Camera() {
         setTimeout(() => {
           setCapturedRaw(null);
           setMode("viewfinder");
+          isCapturingRef.current = false;
         }, 1600);
       } catch {
         toast.error("Erro ao salvar foto. Tente novamente.");
         setCapturedRaw(null);
         setMode("viewfinder");
+        isCapturingRef.current = false;
       } finally {
         setIsSaving(false);
       }

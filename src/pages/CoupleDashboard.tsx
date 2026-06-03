@@ -550,7 +550,7 @@ export default function CoupleDashboard() {
               <div>
                 <p className="text-parchment text-sm">{g.name}</p>
                 <p className="text-parchment-muted text-[10px] mt-0.5">
-                  {formatPhoneBR(g.phone_digits)} · limite {g.photo_limit}
+                  {formatPhoneBR(g.phone_digits)} · limite {g.photo_limit} foto{g.photo_limit !== 1 ? "s" : ""}
                 </p>
               </div>
               <div className="text-right">
