@@ -6,12 +6,15 @@ import {
   ChevronLeft,
   Loader2,
   Pencil,
+  Plus,
   Save,
   Search,
+  UserPlus,
   X,
 } from "lucide-react";
 import BrandHeader from "@/components/BrandHeader";
-import { formatPhoneBR } from "@/lib/phone";
+import { formatPhoneBR, onlyDigits } from "@/lib/phone";
+import { addGuest } from "@/lib/supabasePhotos";
 import {
   getEventStats,
   getPhotoCountsByGuest,
@@ -281,8 +284,14 @@ export default function AdminEventDetail() {
   const [guests, setGuests]     = useState<GuestRow[]>([]);
   const [photoCounts, setPhotoCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading]     = useState(true);
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [search, setSearch]     = useState("");
+  const [showEditForm, setShowEditForm]   = useState(false);
+  const [showAddGuest, setShowAddGuest]   = useState(false);
+  const [newName, setNewName]             = useState("");
+  const [newPhone, setNewPhone]           = useState("");
+  const [newType, setNewType]             = useState<"guest" | "sponsor">("guest");
+  const [newLimit, setNewLimit]           = useState("20");
+  const [isSavingGuest, setIsSavingGuest] = useState(false);
+  const [search, setSearch]               = useState("");
 
   useEffect(() => {
     if (!eventId) return;
@@ -332,6 +341,33 @@ export default function AdminEventDetail() {
   function handleEventSaved(updates: Partial<EventRow>) {
     setEvent((prev) => prev ? { ...prev, ...updates } : prev);
     setShowEditForm(false);
+  }
+
+  async function handleAddGuest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!eventId || isSavingGuest) return;
+    const digits = onlyDigits(newPhone);
+    if (digits.length < 10) { toast.error("Telefone inválido."); return; }
+    const limit = parseInt(newLimit, 10);
+    if (!newName.trim() || isNaN(limit) || limit < 1) { toast.error("Preencha todos os campos."); return; }
+    setIsSavingGuest(true);
+    try {
+      await addGuest({ eventId, name: newName.trim(), phoneDigits: digits, guestType: newType, photoLimit: limit });
+      const newRow: GuestRow = {
+        id: crypto.randomUUID(), event_id: eventId, name: newName.trim(),
+        phone_digits: digits, guest_type: newType as never, photo_limit: limit,
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      };
+      setGuests((prev) => [...prev, newRow].sort((a, b) => a.name.localeCompare(b.name)));
+      setStats((prev) => prev ? { ...prev, totalGuests: prev.totalGuests + 1 } : prev);
+      setNewName(""); setNewPhone(""); setNewType("guest"); setNewLimit("20");
+      setShowAddGuest(false);
+      toast.success("Convidado adicionado.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao adicionar.");
+    } finally {
+      setIsSavingGuest(false);
+    }
   }
 
   function handleGuestLimitUpdated(guestId: string, newLimit: number) {
@@ -464,9 +500,37 @@ export default function AdminEventDetail() {
 
           {/* Convidados */}
           <div>
-            <p className="text-[10px] tracking-luxury uppercase text-gold mb-3">
-              Convidados ({guests.length})
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] tracking-luxury uppercase text-gold">
+                Convidados ({guests.length})
+              </p>
+              <button onClick={() => setShowAddGuest((v) => !v)} className="btn-ghost">
+                {showAddGuest ? <><X size={12} /> Cancelar</> : <><UserPlus size={12} /> Adicionar</>}
+              </button>
+            </div>
+
+            {showAddGuest && (
+              <form onSubmit={handleAddGuest} className="luxe-card p-4 space-y-3 mb-4">
+                <input className="luxe-input" placeholder="Nome completo" value={newName}
+                  onChange={(e) => setNewName(e.target.value)} disabled={isSavingGuest} />
+                <input className="luxe-input" placeholder="(11) 99999-9999" value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)} inputMode="numeric" disabled={isSavingGuest} />
+                <div className="flex gap-3">
+                  <select className="luxe-input flex-1" value={newType}
+                    onChange={(e) => setNewType(e.target.value as "guest" | "sponsor")} disabled={isSavingGuest}>
+                    <option value="guest">Convidado</option>
+                    <option value="sponsor">Patrocinador</option>
+                  </select>
+                  <input className="luxe-input w-20 text-center" type="number" min={1} max={500}
+                    value={newLimit} onChange={(e) => setNewLimit(e.target.value)}
+                    placeholder="Limite" disabled={isSavingGuest} />
+                </div>
+                <button type="submit" className="btn-gold w-full" disabled={isSavingGuest}>
+                  {isSavingGuest ? <><Loader2 size={14} className="animate-spin" /> Salvando…</> : <><Plus size={14} /> Adicionar</>}
+                </button>
+              </form>
+            )}
+
 
             {/* Busca */}
             {guests.length > 6 && (
