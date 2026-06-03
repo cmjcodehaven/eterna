@@ -99,7 +99,7 @@ export default function PolaroidFrame({
         ctx.fillText(dateStr, pixelWidth / 2, TOP + PHOTO + BOT * 0.74);
       }
 
-      onReadyRef.current?.(canvas.toDataURL("image/jpeg", 0.80));
+      onReadyRef.current?.(canvas.toDataURL("image/jpeg", 0.92));
     };
 
     img.onerror = () => {
@@ -113,7 +113,7 @@ export default function PolaroidFrame({
       ctx.textBaseline = "middle";
       ctx.fillText("Foto indisponível", pixelWidth / 2, canvas.height / 2);
       // Notifica o pai mesmo em erro — evita isSaving preso para sempre
-      onReadyRef.current?.(canvas.toDataURL("image/jpeg", 0.80));
+      onReadyRef.current?.(canvas.toDataURL("image/jpeg", 0.92));
     };
 
     img.src = imageSrc;

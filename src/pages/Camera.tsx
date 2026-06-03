@@ -11,7 +11,7 @@ type CameraMode = "viewfinder" | "preview";
 type FacingMode = "environment" | "user";
 
 // Dimensão máxima ao capturar frame (balanceia qualidade × tamanho em storage)
-const MAX_CAPTURE_DIM = 1024;
+const MAX_CAPTURE_DIM = 1920; // maior resolução → melhor qualidade de impressão
 
 function captureRawFrame(video: HTMLVideoElement): string | null {
   if (video.readyState < 2 || !video.videoWidth) return null;
@@ -27,7 +27,7 @@ function captureRawFrame(video: HTMLVideoElement): string | null {
   canvas.width  = w;
   canvas.height = h;
   canvas.getContext("2d")!.drawImage(video, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", 0.80);
+  return canvas.toDataURL("image/jpeg", 0.92);
 }
 
 export default function Camera() {

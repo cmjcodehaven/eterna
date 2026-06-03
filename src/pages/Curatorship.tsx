@@ -157,13 +157,14 @@ export default function Curatorship() {
       {/* Photo area */}
       <div className="flex-1 flex flex-col px-4 pb-4 min-h-0 gap-3">
         {/* Image */}
-        <div className="flex-1 rounded-lg overflow-hidden bg-card min-h-0">
+        <div className="flex-1 flex items-center justify-center min-h-0">
           {currentUrl ? (
             <img
               key={animKey}
               src={currentUrl}
               alt={`Foto de ${current?.guestName}`}
-              className="w-full h-full object-contain animate-photo-enter"
+              className="max-w-full max-h-full object-contain rounded-sm shadow-2xl animate-photo-enter"
+              style={{ maxHeight: "100%" }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
