@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronLeft, Camera as CameraIcon, Images, Loader2, SwitchCamera } from "lucide-react";
+import { ChevronLeft, Camera as CameraIcon, Images, Loader2, SwitchCamera, Grid3X3 } from "lucide-react";
 import PolaroidFrame from "@/components/PolaroidFrame";
 import { useGuest } from "@/contexts/GuestContext";
 import { savePendingPhoto, countPendingPhotos } from "@/lib/photoStorage";
@@ -9,6 +9,15 @@ import { cn } from "@/lib/utils";
 
 type CameraMode = "viewfinder" | "preview";
 type FacingMode = "environment" | "user";
+
+// Salva foto sem efeito polaroid — chama onReady imediatamente
+function RawPhotoSaver({ dataUrl, onReady }: { dataUrl: string; onReady: (d: string) => void }) {
+  const called = useRef(false);
+  useEffect(() => {
+    if (!called.current) { called.current = true; onReady(dataUrl); }
+  }, [dataUrl, onReady]);
+  return <img src={dataUrl} className="max-w-[85%] max-h-[85%] object-contain rounded drop-shadow-2xl" alt="preview" />;
+}
 
 // Dimensão máxima ao capturar frame (balanceia qualidade × tamanho em storage)
 const MAX_CAPTURE_DIM = 1920; // maior resolução → melhor qualidade de impressão
@@ -40,6 +49,8 @@ export default function Camera() {
 
   const [mode, setMode]               = useState<CameraMode>("viewfinder");
   const [facingMode, setFacingMode]   = useState<FacingMode>("environment");
+  const [polaroidOn, setPolaroidOn]   = useState(true);
+  const [showGrid, setShowGrid]       = useState(false);
   const [capturedRaw, setCapturedRaw] = useState<string | null>(null);
   const [capturedAt, setCapturedAt]   = useState<string>("");
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -174,6 +185,14 @@ export default function Camera() {
           )}
         />
 
+        {/* Grid de alinhamento */}
+        {showGrid && (
+          <div className="absolute inset-0 z-10 pointer-events-none" style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
+            backgroundSize: "33.33% 33.33%",
+          }} />
+        )}
+
         {/* Vídeo ao vivo */}
         <video
           ref={videoRef}
@@ -195,12 +214,12 @@ export default function Camera() {
           </div>
         )}
 
-        {/* Preview da polaroid após captura */}
+        {/* Preview após captura */}
         {mode === "preview" && capturedRaw && (
           <div className="absolute inset-0 bg-black/90 flex items-center justify-center p-4 z-10">
             {isSaving ? (
               <Loader2 size={32} className="text-gold animate-spin" />
-            ) : (
+            ) : polaroidOn ? (
               <PolaroidFrame
                 imageSrc={capturedRaw}
                 guestName={guest.name}
@@ -209,6 +228,9 @@ export default function Camera() {
                 pixelWidth={360}
                 className="drop-shadow-2xl max-w-[85%]"
               />
+            ) : (
+              // Sem polaroid: salva a foto raw diretamente
+              <RawPhotoSaver dataUrl={capturedRaw} onReady={handlePolaroidReady} />
             )}
           </div>
         )}
@@ -217,6 +239,26 @@ export default function Camera() {
       {/* ── Controles ────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col justify-between px-6 py-5 gap-4">
         <div className="flex items-center justify-between">
+          {/* Controles esquerda: grid + polaroid toggle */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowGrid((v) => !v)}
+              aria-label="Grid"
+              className={cn("p-1.5 rounded transition-colors", showGrid ? "text-gold" : "text-parchment-muted")}
+            >
+              <Grid3X3 size={15} />
+            </button>
+            <button
+              onClick={() => setPolaroidOn((v) => !v)}
+              className={cn(
+                "text-[9px] tracking-wide uppercase px-2 py-1 rounded border transition-colors",
+                polaroidOn ? "border-gold text-gold" : "border-parchment-muted/40 text-parchment-muted"
+              )}
+            >
+              {polaroidOn ? "Polaroid ON" : "Polaroid OFF"}
+            </button>
+          </div>
+
           {/* Botão de troca de câmera */}
           <button
             onClick={handleFlipCamera}

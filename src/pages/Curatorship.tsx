@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -26,8 +26,9 @@ export default function Curatorship() {
   const [isLoading, setIsLoading]     = useState(true);
   const [isToggling, setIsToggling]   = useState(false);
 
-  // CSS entrance animation class — toggled on each photo change
   const [animKey, setAnimKey]         = useState(0);
+  const [swipeDx, setSwipeDx]         = useState(0); // px offset during drag
+  const touchStartX                   = useRef<number | null>(null);
 
   const prefetchedRef = useRef<Set<string>>(new Set());
 
@@ -97,6 +98,30 @@ export default function Curatorship() {
     advanceTo(currentIndex - 1);
   }
 
+  // ── Touch swipe ─────────────────────────────────────────────────────────────
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    setSwipeDx(e.touches[0].clientX - touchStartX.current);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    const dx = swipeDx;
+    setSwipeDx(0);
+    touchStartX.current = null;
+    if (dx > 80) {
+      // Swipe direita = escolher
+      if (!isToggling) handleChoose();
+    } else if (dx < -80) {
+      // Swipe esquerda = pular
+      handleSkip();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swipeDx, isToggling]);
+
   // ── Loading state ────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -156,15 +181,36 @@ export default function Curatorship() {
 
       {/* Photo area */}
       <div className="flex-1 flex flex-col px-4 pb-4 min-h-0 gap-3">
-        {/* Image */}
-        <div className="flex-1 flex items-center justify-center min-h-0">
+        {/* Image — swipeable */}
+        <div
+          className="flex-1 flex items-center justify-center min-h-0 relative"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Swipe hint labels */}
+          {swipeDx > 30 && (
+            <div className="absolute left-4 top-4 z-10 border-2 border-gold text-gold font-bold text-lg px-3 py-1 rounded rotate-[-15deg] opacity-90">
+              ESCOLHER
+            </div>
+          )}
+          {swipeDx < -30 && (
+            <div className="absolute right-4 top-4 z-10 border-2 border-parchment-muted text-parchment-muted font-bold text-lg px-3 py-1 rounded rotate-[15deg] opacity-90">
+              PULAR
+            </div>
+          )}
           {currentUrl ? (
             <img
               key={animKey}
               src={currentUrl}
               alt={`Foto de ${current?.guestName}`}
-              className="max-w-full max-h-full object-contain rounded-sm shadow-2xl animate-photo-enter"
-              style={{ maxHeight: "100%" }}
+              className="max-w-full max-h-full object-contain rounded-sm shadow-2xl animate-photo-enter select-none"
+              style={{
+                maxHeight: "100%",
+                transform: `translateX(${swipeDx}px) rotate(${swipeDx * 0.03}deg)`,
+                transition: swipeDx === 0 ? "transform 0.2s ease" : "none",
+              }}
+              draggable={false}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">

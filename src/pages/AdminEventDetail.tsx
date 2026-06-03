@@ -9,6 +9,7 @@ import {
   Plus,
   Save,
   Search,
+  Trash2,
   UserPlus,
   X,
 } from "lucide-react";
@@ -21,7 +22,8 @@ import {
   listAllEvents,
   listEventGuestsFull,
   updateEvent,
-  updateGuestPhotoLimit,
+  updateGuest,
+  deleteGuest,
   generateSlug,
   type EventRow,
   type GuestRow,
@@ -171,36 +173,102 @@ function EditEventForm({ event, onSaved, onCancel }: EditEventFormProps) {
   );
 }
 
-// ── Linha de convidado com edição inline de limite ────────────────────────────
+// ── Linha de convidado com edição completa + delete ───────────────────────────
 
 interface GuestRowItemProps {
   guest: GuestRow;
   photoCount: number;
-  onLimitUpdated: (guestId: string, newLimit: number) => void;
+  onUpdated: (guestId: string, updates: Partial<GuestRow>) => void;
+  onDeleted: (guestId: string) => void;
 }
 
-function GuestRowItem({ guest, photoCount, onLimitUpdated }: GuestRowItemProps) {
-  const [editing, setEditing]   = useState(false);
-  const [limitVal, setLimitVal] = useState(String(guest.photo_limit));
-  const [isSaving, setIsSaving] = useState(false);
+function GuestRowItem({ guest, photoCount, onUpdated, onDeleted }: GuestRowItemProps) {
+  const [editing, setEditing]     = useState(false);
+  const [isSaving, setIsSaving]   = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editName, setEditName]   = useState(guest.name);
+  const [editPhone, setEditPhone] = useState(guest.phone_digits);
+  const [editType, setEditType]   = useState(guest.guest_type as string);
+  const [editLimit, setEditLimit] = useState(String(guest.photo_limit));
 
-  async function handleSaveLimit() {
-    const newLimit = parseInt(limitVal, 10);
-    if (isNaN(newLimit) || newLimit < 1) {
-      toast.error("Limite inválido.");
+  function openEdit() {
+    setEditName(guest.name);
+    setEditPhone(guest.phone_digits);
+    setEditType(guest.guest_type as string);
+    setEditLimit(String(guest.photo_limit));
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    const newLimit = parseInt(editLimit, 10);
+    if (!editName.trim() || isNaN(newLimit) || newLimit < 1) {
+      toast.error("Preencha todos os campos corretamente.");
       return;
     }
+    const digits = onlyDigits(editPhone);
+    if (digits.length < 10) { toast.error("Telefone inválido."); return; }
     setIsSaving(true);
     try {
-      await updateGuestPhotoLimit(guest.id, newLimit);
-      onLimitUpdated(guest.id, newLimit);
-      toast.success(`Limite de ${guest.name} atualizado para ${newLimit}.`);
+      const updates = { name: editName.trim(), phone_digits: digits, guest_type: editType, photo_limit: newLimit };
+      await updateGuest(guest.id, updates);
+      onUpdated(guest.id, updates as Partial<GuestRow>);
+      toast.success("Convidado atualizado.");
       setEditing(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao atualizar.");
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      await deleteGuest(guest.id);
+      onDeleted(guest.id);
+      toast.success(`${guest.name} removido.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao remover.");
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="py-3 border-b border-gold-muted space-y-2">
+        <input className="luxe-input" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nome" disabled={isSaving} />
+        <input className="luxe-input" value={formatPhoneBR(editPhone)} onChange={(e) => setEditPhone(onlyDigits(e.target.value))} placeholder="Telefone" inputMode="numeric" disabled={isSaving} />
+        <div className="flex gap-2">
+          <select className="luxe-input flex-1" value={editType} onChange={(e) => setEditType(e.target.value)} disabled={isSaving}>
+            <option value="guest">Convidado</option>
+            <option value="sponsor">Patrocinador</option>
+          </select>
+          <input type="number" min={1} max={500} className="luxe-input w-20 text-center" value={editLimit} onChange={(e) => setEditLimit(e.target.value)} placeholder="Fotos" disabled={isSaving} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setEditing(false)} className="btn-ghost flex-1" disabled={isSaving}><X size={12} /> Cancelar</button>
+          <button onClick={handleSave} className="btn-gold flex-1" disabled={isSaving}>
+            {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Salvar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (confirmDelete) {
+    return (
+      <div className="py-3 border-b border-gold-muted space-y-2">
+        <p className="text-parchment text-sm text-center">Remover <span className="text-gold">{guest.name}</span>?</p>
+        <div className="flex gap-2">
+          <button onClick={() => setConfirmDelete(false)} className="btn-ghost flex-1">Cancelar</button>
+          <button onClick={handleDelete} className="btn-gold flex-1" disabled={isDeleting}>
+            {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} Remover
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -215,58 +283,10 @@ function GuestRowItem({ guest, photoCount, onLimitUpdated }: GuestRowItemProps) 
             </span>
           </p>
         </div>
-
         <div className="flex items-center gap-2 flex-none">
-          {/* Contagem de fotos */}
-          <span className="text-[10px] text-parchment-muted">
-            {photoCount}/{guest.photo_limit} foto{guest.photo_limit !== 1 ? "s" : ""}
-          </span>
-
-          {/* Edição inline de limite */}
-          {!editing ? (
-            <button
-              onClick={() => { setLimitVal(String(guest.photo_limit)); setEditing(true); }}
-              className="btn-ghost"
-              aria-label="Editar limite"
-            >
-              <Pencil size={11} />
-            </button>
-          ) : (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min={1}
-                className="w-14 bg-card border border-gold/40 rounded px-2 py-1 text-parchment text-xs text-center focus:outline-none focus:border-gold"
-                value={limitVal}
-                onChange={(e) => setLimitVal(e.target.value)}
-                disabled={isSaving}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSaveLimit();
-                  if (e.key === "Escape") setEditing(false);
-                }}
-              />
-              <button
-                onClick={handleSaveLimit}
-                disabled={isSaving}
-                className="text-gold"
-                aria-label="Confirmar"
-              >
-                {isSaving ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <Save size={13} />
-                )}
-              </button>
-              <button
-                onClick={() => setEditing(false)}
-                className="text-parchment-muted"
-                aria-label="Cancelar"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          )}
+          <span className="text-[10px] text-parchment-muted">{photoCount}/{guest.photo_limit} fotos</span>
+          <button onClick={openEdit} className="btn-ghost" aria-label="Editar"><Pencil size={11} /></button>
+          <button onClick={() => setConfirmDelete(true)} className="btn-ghost text-destructive-foreground" aria-label="Remover"><Trash2 size={11} /></button>
         </div>
       </div>
     </div>
@@ -370,10 +390,13 @@ export default function AdminEventDetail() {
     }
   }
 
-  function handleGuestLimitUpdated(guestId: string, newLimit: number) {
-    setGuests((prev) =>
-      prev.map((g) => (g.id === guestId ? { ...g, photo_limit: newLimit } : g))
-    );
+  function handleGuestUpdated(guestId: string, updates: Partial<GuestRow>) {
+    setGuests((prev) => prev.map((g) => (g.id === guestId ? { ...g, ...updates } : g)));
+  }
+
+  function handleGuestDeleted(guestId: string) {
+    setGuests((prev) => prev.filter((g) => g.id !== guestId));
+    setStats((prev) => prev ? { ...prev, totalGuests: prev.totalGuests - 1 } : prev);
   }
 
   if (isLoading) {
@@ -559,7 +582,8 @@ export default function AdminEventDetail() {
                 key={g.id}
                 guest={g}
                 photoCount={photoCounts[g.id] ?? 0}
-                onLimitUpdated={handleGuestLimitUpdated}
+                onUpdated={handleGuestUpdated}
+                onDeleted={handleGuestDeleted}
               />
             ))}
           </div>

@@ -161,6 +161,23 @@ export async function updateGuestPhotoLimit(
   if (error) throw new Error(error.message);
 }
 
+export async function updateGuest(
+  guestId: string,
+  updates: { name?: string; phone_digits?: string; guest_type?: string; photo_limit?: number }
+): Promise<void> {
+  const { error } = await supabase
+    .from("guests")
+    .update(updates as unknown as never)
+    .eq("id", guestId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteGuest(guestId: string): Promise<void> {
+  const { error } = await supabase.from("guests").delete().eq("id", guestId);
+  if (error) throw new Error(error.message);
+}
+
 // ── Utilitários ───────────────────────────────────────────────────────────────
 
 /** "Casamento Márcio & Ana" → "casamento-marcio-ana" */
